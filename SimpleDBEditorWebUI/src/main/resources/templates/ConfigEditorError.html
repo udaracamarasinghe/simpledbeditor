@@ -1,0 +1,116 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<title>Configuration Editor</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<link rel="stylesheet" type="text/css"
+	th:href="@{/webjars/bootstrap/3.3.7/css/bootstrap.min.css}" />
+
+<link rel="stylesheet" th:href="@{/css/main.css}"
+	href="../../css/main.css" />
+
+<script type="text/javascript" src="../../js/jquery-3.2.1.min.js">
+	</script>
+<script type="text/javascript" src="../../js/notify.min.js">
+	</script>
+
+<script th:inline="javascript">
+/*<![CDATA[*/
+    
+    $( document ).ready(function() {
+    	var message = /*[[${formMessage}]]*/ ;
+
+        if(message !== null)
+    	$.notify(message, {autoHideDelay: 10000, className: 'success'});
+
+        var errorMessage = /*[[${formErrorMessage}]]*/ ;
+
+        if(errorMessage !== null)
+    	$.notify(errorMessage,  {autoHideDelay: 10000, className: 'error'});
+    	
+    });
+ 
+    $( window ).on( "load", function() {
+        console.log( "window loaded" );
+    });
+    /*]]>*/
+    </script>
+
+<style type="text/css">
+.delete-button {
+	background-image: url(../../images/Files-Delete-File-icon.png);
+	background-color: transparent;
+	background-repeat: no-repeat;
+	background-position: 0px 0px;
+	border: none;
+	cursor: pointer;
+	height: 40px;
+	padding-left: 40px;
+	vertical-align: middle;
+}
+
+.edit-button {
+	background-image: url(../../images/Files-Edit-File-icon.png);
+	background-color: transparent;
+	background-repeat: no-repeat;
+	background-position: 0px 0px;
+	border: none;
+	cursor: pointer;
+	height: 40px;
+	padding-left: 40px;
+	vertical-align: middle;
+}
+
+.overlay {
+	position: inherit;
+	top: 2;
+	right: 0;
+	padding-right: 100;
+	left: 100;
+	border-radius: 4px;
+	border: 1px solid rgba(221, 221, 221, 0.5);
+	width: auto;
+	height: auto;
+	z-index: 10;
+	background: rgba(221, 221, 221, 0.5);
+	border-radius: 4px; /*dim the background*/
+}
+
+footer {
+	position: fixed;
+	height: auto;
+	bottom: 0;
+	width: 100%;
+	padding: 0.4%;
+	background-color: white;
+	border-top: 1px solid #ddd;
+}
+</style>
+</head>
+<body>
+
+	<nav class="navbar navbar-inverse" style="background-color: #3b5998;">
+		<div class="container">
+			<div class="navbar-header">
+				<a class="navbar-brand" style="color: white;" href="#">Configuration
+					Editor</a>
+			</div>
+
+		</div>
+	</nav>
+
+	<div class="container col-md-12" style="padding-bottom: 2%;">
+		<div class="starter-template form-group"></div>
+	</div>
+
+	<footer class="footer text-center">
+
+		<div>© 2008-2017 · Dialog Axiata PLC · Powered by Converged
+			Charging</div>
+	</footer>
+
+	<script type="text/javascript"
+		src="webjars/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+</body>
+</html>
