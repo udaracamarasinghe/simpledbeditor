@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+	xmlns:layout="http://www.ultraq.net.nz/web/thymeleaf/layout"
+	xmlns="http://www.w3.org/1999/html"
+	layout:decorator="some-thymeleaf-layout">
+<head>
+<meta charset="ISO-8859-1">
+<title>Insert title here</title>
+<script
+	src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+</head>
+<body>
+	<div layout:fragment="content">
+		<h2 class="sub-header">Job Search</h2>
+		<form th:action="@{/save}" th:object="${testDto}" method="POST">
+			<input class="form-control" type="text" th:field="*{name}" /> <input
+				class="form-control" type="text" th:field="*{age}" /> <input
+				type="submit"> <span th:text="*{status}"></span>
+		</form>
+
+		<form th:action="@{/save}" th:object="${testDto}" method="POST">
+			<!--   input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" / -->
+			<select class="form-control" name="example" id="modules"
+				onchange='this.form.submit()'
+				th:value="${selectedConfigPluginWrapperId}"
+				th:field="*{selectedConfigPluginWrapperId}">
+				<option value="0">[PLEASE SELECT]</option>
+				<option value="1">One</option>
+				<option value="2">Two</option>
+				<option value="3">Three</option>
+			</select>
+		</form>
+
+		<form id="search-form">
+			<div class="col-sm-2 form-group">
+				<label for="search-term">Search term:</label> <input type="text"
+					class="form-control" id="search-term" placeholder="Search term"></input>
+			</div>
+			<div class="col-sm-2 form-group">
+				<label for="search-location">Location:</label> <input type="text"
+					class="form-control" id="search-location" placeholder="Location"></input>
+			</div>
+			<div class="col-sm-2 form-group">
+				<label for="search-distance">Radius:</label> <input type="number"
+					class="form-control" id="search-distance" placeholder="Radius"></input>
+			</div>
+			<div class="col-sm-2 form-group">
+				<label for="search-platform">Platform:</label> <select
+					class="form-control" id="search-platform">
+					<option value="newsletter">newsletter</option>
+					<option value="jobs">jobs</option>
+				</select>
+			</div>
+			<div class="col-sm-2 form-group">
+				<label for="page">Page:</label> <input type="number"
+					class="form-control" id="page" placeholder="Page" value="0"></input>
+			</div>
+			<div class="col-sm-2 form-group">
+				<label for="page-size">Page size:</label> <input type="number"
+					class="form-control" id="page-size" placeholder="Page size"
+					value="20"></input>
+			</div>
+	</div>
+	<div class="row">
+		<div class="col-sm-1">
+			<input type="submit" class="form-control" id="submit" value="Search"></input>
+		</div>
+	</div>
+	</form>
+	<div class="table-responsive" th:fragment="result-table"
+		id="result-table">
+		<div th:if="${jobs != null}" class="col-sm-2 form-group">
+			<p th:text="'Total results: '+${jobs.totalElements}"></p>
+		</div>
+		<table class="table table-striped">
+			<thead>
+				<tr>
+					<th>Title</th>
+					<th>Location</th>
+					<th>Published date</th>
+					<th>Company</th>
+					<th>Teaser</th>
+				</tr>
+			</thead>
+			<tbody th:if="${jobs != null}">
+				<tr th:each="job, itr : ${jobs.content}">
+					<td th:text="${job.title}">Titel</td>
+					<td th:text="${job.location}">Ort</td>
+					<td th:text="${job.published}">Datum</td>
+					<td th:text="${job.company}">Firma</td>
+					<td>
+						<button class="btn" data-toggle="collapse"
+							th:attr="data-target='#teaser-spoiler_'+${itr.index}">Ausklappen</button>
+						<div th:id="'teaser-spoiler_'+${itr.index}"
+							class="collapse teaser-spoiler" th:text="${job.teaser}"></div>
+					</td>
+
+				</tr>
+			</tbody>
+		</table>
+	</div>
+
+	</div>
+
+	<th:block layout:fragment="script">
+		<script>
+			/*<![CDATA[*/
+			$('#submit').on(
+					'click',
+					function(e) {
+						e.preventDefault();
+						var data = new Object();
+						data.jobname = $('#search-term').val() || null;
+						data.location = $('#search-location').val() || null;
+						data.radius = $('#search-distance').val() || null;
+						data.platform = $('#search-platform').val() || null;
+						var page = $('#page').val() || null;
+						var size = $('#page-size').val() || null;
+						$.ajax({
+							url : '/jobapi/search/query?size=' + size
+									+ '&page=' + page,
+							method : 'POST',
+							data : JSON.stringify(data),
+							contentType : 'application/json',
+							success : function(data, textStatus, jqXHR) {
+								$('#result-table').replaceWith(data);
+							}
+						});
+					});
+			/*]]>*/
+		</script>
+	</th:block>
+</body>
+</html>
