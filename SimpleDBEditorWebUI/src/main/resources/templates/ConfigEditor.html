@@ -118,15 +118,17 @@ footer {
 
 	<div class="container col-md-12" style="padding-bottom: 2%;">
 		<div class="starter-template form-group">
-			<div class="row">
-				<div class="col-md-1">
-					<label for="modules">Modules:</label>
-				</div>
-				<div class="col-md-4">
-					<form action="#" th:action="@{/config}"
-						th:object="${configCtrlPageModel}" method="POST">
+			<form th:action="${contextPath}" th:object="${configCtrlPageModel}"
+				method="POST">
+
+				<div class="row">
+
+					<div class="col-md-1">
+						<label for="modules">Modules:</label>
+					</div>
+					<div class="col-md-4">
 						<!--   input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" / -->
-						<select class="form-control" name="example" id="modules"
+						<select class="form-control" name="exampltte" id="modules"
 							onchange='this.form.submit()'
 							th:value="${selectedConfigPluginWrapperId}"
 							th:field="*{selectedConfigPluginWrapperId}">
@@ -134,25 +136,25 @@ footer {
 							<option th:each="module : ${modules}" th:value="${module}"
 								th:text="${module}"></option>
 						</select>
-					</form>
-				</div>
-				<div class="col-md-2" align="left">
-					<label for="modules">Configuration Types:</label>
-				</div>
-				<div class="col-md-5">
-					<form action="#" th:action="@{/config}"
-						th:object="${configCtrlPageModel}" method="POST">
+					</div>
+					<div class="col-md-2" align="left">
+						<label for="modules">Configuration Types:</label>
+					</div>
+					<div class="col-md-5">
+
 						<!-- input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" / -->
-						<select class="form-control" name="example" id="configs"
+						<select class="form-control" name="exampleii" id="configs"
 							th:value="${selectedConfigId}" th:field="*{selectedConfigId}"
 							onchange='this.form.submit()'>
 							<option value="0">[PLEASE SELECT]</option>
 							<option th:each="config : ${configs}" th:value="${config}"
 								th:text="${config}"></option>
 						</select>
-					</form>
+					</div>
+
 				</div>
-			</div>
+
+			</form>
 
 			<div class="row">
 				<div class="col-md-12" style="height: 20px;"></div>
@@ -181,7 +183,7 @@ footer {
 										</th:block>
 										<td>
 											<form action="#"
-												th:action="@{/config/editRow/{editRowId}(editRowId=${columnValue.id})}"
+												th:action="@{{editRow}/{editRowId}(editRowId=${columnValue.id},editRow=${editRow})}"
 												th:object="${configCtrlPageModel}" method="POST">
 												<!-- input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" / -->
 												<input type="hidden" th:value="${columnValue.id}"
@@ -233,6 +235,8 @@ footer {
 					</section>
 				</div>
 			</section>
+
+
 
 			<div class="row">
 				<div class="col-md-12" style="height: 20px;"></div>

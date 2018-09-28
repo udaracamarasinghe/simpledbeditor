@@ -45,7 +45,7 @@ import org.uca.uies.api.simpledbeditorl.exceptions.HandledException;
  * @author Udara Amarasinghe
  */
 @Controller
-@RequestMapping("/config")
+@RequestMapping("${simpledbeditor.path:/simpledbeditor}")
 @Scope(value = "session", proxyMode = ScopedProxyMode.TARGET_CLASS)
 public class ConfigEditorController {
 
@@ -55,18 +55,6 @@ public class ConfigEditorController {
 	private ConfigCtrlService configCtrlService;
 
 	private ConfigCtrlPageModel configCtrlPageModel;
-
-	private String selectedConfigPluginWrapperId;
-
-	private String selectedConfigId;
-
-	private Set<String> configs;
-
-	private List<String> columnNames;
-
-	private List<ColumnValue> columnValues;
-
-	private Object selectedRowId;
 
 	private ConfigPluginWrapper selectedConfigPluginWrapper;
 
@@ -82,47 +70,26 @@ public class ConfigEditorController {
 
 	private int formMessageSetAtRefreshCount;
 
-	@Value("${configeditor.header-title}")
+	@Value("${simpledbeditor.path:/simpledbeditor}")
+	private String contextPath;
+
+	@Value("${configeditor.header-title:Example header}")
 	private String headerTitle;
 
-	@Value("${configeditor.footer-title}")
+	@Value("${configeditor.footer-title:Example footer}")
 	private String footerTitle;
-	
-	@Value("${loingdetails.show}")
+
+	@Value("${loingdetails.show:false}")
 	private Boolean loingdetailsShow;
 
-	@PostConstruct
-	private void postConstruct() {
-		configCtrlPageModel = new ConfigCtrlPageModel();
-	}
-
 	@RequestMapping(method = RequestMethod.GET)
-	public ModelAndView getConfig() {
+	public ModelAndView getConfig(@ModelAttribute("configCtrlPageModel") @Valid ConfigCtrlPageModel configCtrlPageModel,
+			BindingResult bindingResult) {
 		ModelAndView model = new ModelAndView("ConfigEditor");
-
-		model.addObject("refreshCount", refreshCount++);
 
 		model.addObject("modules", getModules());
 
-		model.addObject("configCtrlPageModel", configCtrlPageModel);
-
-		model.addObject("selectedConfigPluginWrapperId", selectedConfigPluginWrapperId);
-		model.addObject("selectedConfigPluginWrapper", selectedConfigPluginWrapper);
-		model.addObject("currentConfigPlugin", currentConfigPlugin);
-		model.addObject("configs", configs);
-
-		model.addObject("selectedConfigId", selectedConfigId);
-		model.addObject("columnNames", columnNames);
-		model.addObject("columnValues", columnValues);
-
-		model.addObject("selectedRowId", selectedRowId);
-
-		model.addObject("editorModel", editorModel);
-
-		if (refreshCount != formMessageSetAtRefreshCount) {
-			formMessage = null;
-			formErrorMessage = null;
-		}
+		model.addObject("configCtrlPageModel", new ConfigCtrlPageModel());
 
 		model.addObject("formMessage", formMessage);
 
@@ -133,8 +100,12 @@ public class ConfigEditorController {
 		model.addObject("headerTitle", headerTitle);
 
 		model.addObject("footerTitle", footerTitle);
-		
+
 		model.addObject("loingdetailsShow", loingdetailsShow);
+
+		model.addObject("editRow", contextPath + "/editRow/");
+
+		model.addObject("contextPath", contextPath);
 
 		return model;
 	}
@@ -142,70 +113,122 @@ public class ConfigEditorController {
 	@RequestMapping(method = RequestMethod.POST)
 	public ModelAndView setConfig(@ModelAttribute("configCtrlPageModel") @Valid ConfigCtrlPageModel configCtrlPageModel,
 			BindingResult bindingResult) {
-		try {
-			if (configCtrlPageModel.getSelectedConfigPluginWrapperId() != null
-					&& !configCtrlPageModel.getSelectedConfigPluginWrapperId().equals("0")
-					&& !configCtrlPageModel.getSelectedConfigPluginWrapperId()
-							.equals(this.configCtrlPageModel.getSelectedConfigPluginWrapperId())) {
-				this.configCtrlPageModel
-						.setSelectedConfigPluginWrapperId(configCtrlPageModel.getSelectedConfigPluginWrapperId());
+		ModelAndView model = new ModelAndView("ConfigEditor");
 
-				Map<String, ConfigPluginWrapper> configPlugins = configCtrlService.availableConfigPlugins();
-				this.selectedConfigPluginWrapper = configPlugins
-						.get(this.configCtrlPageModel.getSelectedConfigPluginWrapperId());
+		Map<String, ConfigPluginWrapper> configPlugins = configCtrlService.availableConfigPlugins();
 
-				this.currentConfigPlugin = this.selectedConfigPluginWrapper.getEditableConfigPlugin();
-				this.configs = this.currentConfigPlugin != null ? this.currentConfigPlugin.configTypes().keySet()
-						: new HashSet<String>(0);
-			} else if (configCtrlPageModel.getSelectedConfigPluginWrapperId() != null
-					&& (configCtrlPageModel.getSelectedConfigPluginWrapperId().equals("0")
-							&& !"0".equals(this.configCtrlPageModel.getSelectedConfigPluginWrapperId()))) {
-				this.configCtrlPageModel.setSelectedConfigPluginWrapperId("0");
-				this.selectedConfigPluginWrapper = null;
-				this.configs = null;
+		Set<String> modules = configPlugins.keySet();
 
-				this.configCtrlPageModel.setSelectedConfigId("0");
-				this.currentConfigPlugin = null;
-				this.columnNames = null;
-				this.columnValues = null;
+		model.addObject("modules", modules);
 
-				this.editorModel = null;
+		if (configCtrlPageModel.getSelectedConfigPluginWrapperId() != null) {
+			ConfigPluginWrapper configPluginWrapper = configPlugins
+					.get(configCtrlPageModel.getSelectedConfigPluginWrapperId());
+
+			model.addObject("configs", configPluginWrapper.getEditableConfigPlugin().configTypes().keySet());
+
+			if (configCtrlPageModel.getSelectedConfigId() != null) {
+				loadColumnNames(configCtrlPageModel.getSelectedConfigId(), configPluginWrapper, model);
 			}
-
-			if (configCtrlPageModel.getSelectedConfigId() != null
-					&& !configCtrlPageModel.getSelectedConfigId().equals("0") && !configCtrlPageModel
-							.getSelectedConfigId().equals(this.configCtrlPageModel.getSelectedConfigId())) {
-				this.configCtrlPageModel.setSelectedConfigId(configCtrlPageModel.getSelectedConfigId());
-
-				// loadColumnNames(this.configCtrlPageModel.getSelectedConfigId());
-
-				this.columnNames = null;
-				this.columnValues = null;
-
-				this.editorModel = null;
-			} else {
-				this.configCtrlPageModel.setSelectedConfigId("0");
-				this.currentConfigPlugin = null;
-				this.columnNames = null;
-				this.columnValues = null;
-
-				this.editorModel = null;
-			}
-
-			updateViewModel();
-		} catch (Exception ex) {
-			loadFormMessageError(ex.getMessage());
 		}
 
-		ModelAndView modelv = new ModelAndView("redirect:/config");
-		return modelv;
+		model.addObject("configCtrlPageModel", configCtrlPageModel);
+
+		model.addObject("formMessage", formMessage);
+
+		model.addObject("formErrorMessage", formErrorMessage);
+
+		model.addObject("formMessageSetAtRefreshCount", formMessageSetAtRefreshCount);
+
+		model.addObject("headerTitle", headerTitle);
+
+		model.addObject("footerTitle", footerTitle);
+
+		model.addObject("loingdetailsShow", loingdetailsShow);
+
+		model.addObject("editRow", contextPath + "/editRow/");
+
+		model.addObject("contextPath", contextPath);
+
+		return model;
 	}
 
+	// @RequestMapping(method = RequestMethod.POST, path = "")
+	// public ModelAndView setConfig(@ModelAttribute("configCtrlPageModel") @Valid
+	// ConfigCtrlPageModel configCtrlPageModel,
+	// BindingResult bindingResult) {
+	// try {
+	// if (configCtrlPageModel.getSelectedConfigPluginWrapperId() != null
+	// && !configCtrlPageModel.getSelectedConfigPluginWrapperId().equals("0")
+	// && !configCtrlPageModel.getSelectedConfigPluginWrapperId()
+	// .equals(this.configCtrlPageModel.getSelectedConfigPluginWrapperId())) {
+	// this.configCtrlPageModel
+	// .setSelectedConfigPluginWrapperId(configCtrlPageModel.getSelectedConfigPluginWrapperId());
+	//
+	// Map<String, ConfigPluginWrapper> configPlugins =
+	// configCtrlService.availableConfigPlugins();
+	// this.selectedConfigPluginWrapper = configPlugins
+	// .get(this.configCtrlPageModel.getSelectedConfigPluginWrapperId());
+	//
+	// this.currentConfigPlugin =
+	// this.selectedConfigPluginWrapper.getEditableConfigPlugin();
+	// this.configs = this.currentConfigPlugin != null ?
+	// this.currentConfigPlugin.configTypes().keySet()
+	// : new HashSet<String>(0);
+	// } else if (configCtrlPageModel.getSelectedConfigPluginWrapperId() != null
+	// && (configCtrlPageModel.getSelectedConfigPluginWrapperId().equals("0")
+	// && !"0".equals(this.configCtrlPageModel.getSelectedConfigPluginWrapperId())))
+	// {
+	// this.configCtrlPageModel.setSelectedConfigPluginWrapperId("0");
+	// this.selectedConfigPluginWrapper = null;
+	// this.configs = null;
+	//
+	// this.configCtrlPageModel.setSelectedConfigId("0");
+	// this.currentConfigPlugin = null;
+	// this.columnNames = null;
+	// this.columnValues = null;
+	//
+	// this.editorModel = null;
+	// }
+	//
+	// if (configCtrlPageModel.getSelectedConfigId() != null
+	// && !configCtrlPageModel.getSelectedConfigId().equals("0") &&
+	// !configCtrlPageModel
+	// .getSelectedConfigId().equals(this.configCtrlPageModel.getSelectedConfigId()))
+	// {
+	// this.configCtrlPageModel.setSelectedConfigId(configCtrlPageModel.getSelectedConfigId());
+	//
+	// // loadColumnNames(this.configCtrlPageModel.getSelectedConfigId());
+	//
+	// this.columnNames = null;
+	// this.columnValues = null;
+	//
+	// this.editorModel = null;
+	// } else {
+	// this.configCtrlPageModel.setSelectedConfigId("0");
+	// this.currentConfigPlugin = null;
+	// this.columnNames = null;
+	// this.columnValues = null;
+	//
+	// this.editorModel = null;
+	// }
+	//
+	// updateViewModel();
+	// } catch (Exception ex) {
+	// loadFormMessageError(ex.getMessage());
+	// }
+	//
+	// ModelAndView modelv = new ModelAndView("redirect:/config");
+	// return modelv;
+	// }
+
 	@RequestMapping(value = { "/editRow/{editRowId}" }, method = RequestMethod.POST)
-	public ModelAndView editRow(@PathVariable("editRowId") String editRowId) {
+	public ModelAndView editRow(@PathVariable("editRowId") String editRowId,
+			@ModelAttribute("configCtrlPageModel") @Valid ConfigCtrlPageModel configCtrlPageModel,
+			BindingResult bindingResult) {
 		loadEditorModel(editRowId);
 
-		ModelAndView modelv = new ModelAndView("redirect:/config");
+		ModelAndView modelv = new ModelAndView("ConfigEditor");
 		return modelv;
 	}
 
@@ -446,49 +469,99 @@ public class ConfigEditorController {
 		}
 	}
 
-	public void loadColumnNames(String selectedConfigId2) {
-		if (selectedConfigPluginWrapper != null) {
-			EditableConfigPlugin editableConfigPlugin = selectedConfigPluginWrapper.getEditableConfigPlugin();
+	public void loadColumnNames(String selectedConfigId2, ConfigPluginWrapper configPluginWrapper, ModelAndView model) {
+		EditableConfigPlugin editableConfigPlugin = configPluginWrapper.getEditableConfigPlugin();
 
-			Class<?> selectedConfigType = editableConfigPlugin.configTypes().get(selectedConfigId2);
+		Class<?> selectedConfigType = editableConfigPlugin.configTypes().get(selectedConfigId2);
 
-			if (selectedConfigType != null) {
-				try {
-					columnNames = new ArrayList<>();
+		if (selectedConfigType != null) {
+			try {
+				ArrayList<String> columnNames = new ArrayList<>();
+				ArrayList<ColumnValue> columnValues = new ArrayList<>();
 
-					Map<String, FieldDetails> allEditableFields = findAllEditableFields(selectedConfigType);
+				Map<String, FieldDetails> allEditableFields = findAllEditableFields(selectedConfigType);
 
-					columnValues = new ArrayList<>();
+				Map<String, Object> configDataFor = editableConfigPlugin.findConfigDataFor(selectedConfigId2);
 
-					Map<String, Object> configDataFor = editableConfigPlugin.findConfigDataFor(selectedConfigId2);
+				for (Object key : configDataFor.keySet()) {
+					Object object = configDataFor.get(key);
 
-					for (Object key : configDataFor.keySet()) {
-						Object object = configDataFor.get(key);
+					List<Object> values = new ArrayList<Object>();
+					for (FieldDetails field : allEditableFields.values()) {
+						if (field.configEditorEditable.isViewableOnTable()) {
+							field.field.setAccessible(true);
+							Object fieldValue = field.field.get(object);
 
-						List<Object> values = new ArrayList<Object>();
-						for (FieldDetails field : allEditableFields.values()) {
-							if (field.configEditorEditable.isViewableOnTable()) {
-								field.field.setAccessible(true);
-								Object fieldValue = field.field.get(object);
-
-								values.add(fieldValue);
-								if (!columnNames.contains(field.field.getName()))
-									columnNames.add(field.field.getName());
-							}
+							values.add(fieldValue);
+							if (!columnNames.contains(field.field.getName()))
+								columnNames.add(field.field.getName());
 						}
-
-						ColumnValue e = new ColumnValue();
-						e.setId(key);
-						e.setValues(values);
-
-						columnValues.add(e);
 					}
-				} catch (EditableConfigException | IllegalArgumentException | IllegalAccessException ex) {
-					logger.log(Level.SEVERE, ex.getMessage());
+
+					ColumnValue e = new ColumnValue();
+					e.setId(key);
+					e.setValues(values);
+
+					columnValues.add(e);
 				}
+
+				model.addObject("columnNames", columnNames);
+				model.addObject("columnValues", columnValues);
+			} catch (EditableConfigException | IllegalArgumentException | IllegalAccessException ex) {
+				logger.log(Level.SEVERE, ex.getMessage());
 			}
 		}
+
 	}
+
+	// public void loadColumnNames(String selectedConfigId2) {
+	// if (selectedConfigPluginWrapper != null) {
+	// EditableConfigPlugin editableConfigPlugin =
+	// selectedConfigPluginWrapper.getEditableConfigPlugin();
+	//
+	// Class<?> selectedConfigType =
+	// editableConfigPlugin.configTypes().get(selectedConfigId2);
+	//
+	// if (selectedConfigType != null) {
+	// try {
+	// columnNames = new ArrayList<>();
+	//
+	// Map<String, FieldDetails> allEditableFields =
+	// findAllEditableFields(selectedConfigType);
+	//
+	// columnValues = new ArrayList<>();
+	//
+	// Map<String, Object> configDataFor =
+	// editableConfigPlugin.findConfigDataFor(selectedConfigId2);
+	//
+	// for (Object key : configDataFor.keySet()) {
+	// Object object = configDataFor.get(key);
+	//
+	// List<Object> values = new ArrayList<Object>();
+	// for (FieldDetails field : allEditableFields.values()) {
+	// if (field.configEditorEditable.isViewableOnTable()) {
+	// field.field.setAccessible(true);
+	// Object fieldValue = field.field.get(object);
+	//
+	// values.add(fieldValue);
+	// if (!columnNames.contains(field.field.getName()))
+	// columnNames.add(field.field.getName());
+	// }
+	// }
+	//
+	// ColumnValue e = new ColumnValue();
+	// e.setId(key);
+	// e.setValues(values);
+	//
+	// columnValues.add(e);
+	// }
+	// } catch (EditableConfigException | IllegalArgumentException |
+	// IllegalAccessException ex) {
+	// logger.log(Level.SEVERE, ex.getMessage());
+	// }
+	// }
+	// }
+	// }
 
 	private void loadEditorModel(String editRowId) {
 		if (editRowId != null) {
@@ -543,8 +616,8 @@ public class ConfigEditorController {
 	}
 
 	private void updateViewModel() {
-		if (this.configCtrlPageModel != null)
-			loadColumnNames(this.configCtrlPageModel.getSelectedConfigId());
+		// if (this.configCtrlPageModel != null)
+		// // loadColumnNames(this.configCtrlPageModel.getSelectedConfigId());
 
 		if (this.configCtrlPageModel != null && this.editorModel != null && this.editorModel.getEditId() != null
 				&& !this.editorModel.getEditId().isEmpty())
@@ -578,7 +651,8 @@ public class ConfigEditorController {
 			for (Field field : cc.getDeclaredFields()) {
 				ConfigEditorField configEditorEditable = field.getAnnotation(ConfigEditorField.class);
 
-				if (configEditorEditable != null && configEditorEditable.isEditable()) {
+				if (configEditorEditable != null
+						&& (configEditorEditable.isEditable() || configEditorEditable.isViewableOnTable())) {
 					field.setAccessible(true);
 					FieldDetails fieldDetails = new FieldDetails();
 
