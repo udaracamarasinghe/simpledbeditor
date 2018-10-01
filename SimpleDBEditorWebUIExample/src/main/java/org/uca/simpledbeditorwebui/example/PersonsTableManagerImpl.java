@@ -9,16 +9,17 @@ import java.util.Optional;
 import javax.annotation.PostConstruct;
 
 import org.springframework.stereotype.Service;
-import org.uca.uies.api.simpledbeditorl.apis.EditableConfigPlugin;
+import org.uca.uies.api.simpledbeditorl.apis.TableManager;
 import org.uca.uies.api.simpledbeditorl.dto.KeyValue;
 import org.uca.uies.api.simpledbeditorl.enums.ProcessFailType;
 import org.uca.uies.api.simpledbeditorl.exceptions.EditableConfigException;
 
-public class EditableConfigPluginImpl implements EditableConfigPlugin {
+@Service
+public class PersonsTableManagerImpl implements TableManager {
 
 	private Map<String, Person> data;
 
-	public EditableConfigPluginImpl() {
+	public PersonsTableManagerImpl() {
 		data = new HashMap<>();
 
 		data.put("Person1", new Person("Person1", 12));
@@ -48,7 +49,7 @@ public class EditableConfigPluginImpl implements EditableConfigPlugin {
 	}
 
 	@Override
-	public Map<String, Object> findConfigDataFor(String configName) throws EditableConfigException {
+	public Map<String, Object> findRecordsFor(String configName) throws EditableConfigException {
 		Map<String, Object> map = new LinkedHashMap<>();
 
 		switch (configName) {
@@ -66,11 +67,10 @@ public class EditableConfigPluginImpl implements EditableConfigPlugin {
 	}
 
 	@Override
-	public Object newConfigEntry(String configName) throws EditableConfigException {
+	public Object newRowEntry(String configName) throws EditableConfigException {
 		switch (configName) {
 		case "Persons": {
-			throw new EditableConfigException(ProcessFailType.BAD_REQUEST,
-					"New entries not allowed in Loan-Profile-Config.");
+			return new Person();
 		}
 		}
 		return null;
@@ -82,7 +82,10 @@ public class EditableConfigPluginImpl implements EditableConfigPlugin {
 			switch (configName) {
 
 			case "Persons": {
+				Person p = (Person) record;
+				data.put(p.getName(), (Person) record);
 
+				return new KeyValue(p.getName(), p);
 			}
 			}
 		} catch (Exception ex) {

@@ -6,7 +6,7 @@
 
 	<groupId>org.uca</groupId>
 	<artifactId>SimpleDBEditorWebUIExample</artifactId>
-	<version>0.0.1</version>
+	<version>1.0.RELEASE</version>
 	<packaging>jar</packaging>
 
 	<name>SimpleDBEditorWebUIExample</name>
@@ -34,7 +34,7 @@
 		<dependency>
 			<groupId>org.uca</groupId>
 			<artifactId>SimpleDBEditor</artifactId>
-			<version>0.0.2</version>
+			<version>1.0.RELEASE</version>
 		</dependency>
 
 		<dependency>

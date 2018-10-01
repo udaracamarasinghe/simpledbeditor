@@ -1,16 +1,14 @@
-package org.uca.uies.api.simpledbeditorl;
+package org.uca.uies.api.simpledbeditorl.controller;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.annotation.PostConstruct;
 import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,18 +25,20 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.ModelAndView;
 import org.uca.uies.api.simpledbeditorl.annotations.ConfigEditorField;
-import org.uca.uies.api.simpledbeditorl.apis.ConfigCtrlService;
-import org.uca.uies.api.simpledbeditorl.apis.EditableConfigPlugin;
+import org.uca.uies.api.simpledbeditorl.apis.SimpleDBEditorService;
+import org.uca.uies.api.simpledbeditorl.apis.TableManager;
 import org.uca.uies.api.simpledbeditorl.dto.ColumnValue;
 import org.uca.uies.api.simpledbeditorl.dto.ConfigCtrlPageModel;
-import org.uca.uies.api.simpledbeditorl.dto.ConfigPluginWrapper;
 import org.uca.uies.api.simpledbeditorl.dto.EditorField;
 import org.uca.uies.api.simpledbeditorl.dto.EditorModel;
-import org.uca.uies.api.simpledbeditorl.dto.KeyValue;
 import org.uca.uies.api.simpledbeditorl.dto.EditorModel.EditType;
+import org.uca.uies.api.simpledbeditorl.dto.KeyValue;
+import org.uca.uies.api.simpledbeditorl.dto.ModuleManager;
 import org.uca.uies.api.simpledbeditorl.enums.ProcessFailType;
 import org.uca.uies.api.simpledbeditorl.exceptions.EditableConfigException;
 import org.uca.uies.api.simpledbeditorl.exceptions.HandledException;
+
+import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * 
@@ -52,15 +52,7 @@ public class ConfigEditorController {
 	private static final Logger logger = Logger.getLogger(ConfigEditorController.class.getName());
 
 	@Autowired
-	private ConfigCtrlService configCtrlService;
-
-	private ConfigCtrlPageModel configCtrlPageModel;
-
-	private ConfigPluginWrapper selectedConfigPluginWrapper;
-
-	private EditorModel editorModel;
-
-	private EditableConfigPlugin currentConfigPlugin;
+	private SimpleDBEditorService configCtrlService;
 
 	private String formMessage;
 
@@ -73,10 +65,10 @@ public class ConfigEditorController {
 	@Value("${simpledbeditor.path:/simpledbeditor}")
 	private String contextPath;
 
-	@Value("${configeditor.header-title:Example header}")
+	@Value("${configeditor.header-title:Simple DB Editor}")
 	private String headerTitle;
 
-	@Value("${configeditor.footer-title:Example footer}")
+	@Value("${configeditor.footer-title:Simple DB Editor by UCA}")
 	private String footerTitle;
 
 	@Value("${loingdetails.show:false}")
@@ -89,7 +81,7 @@ public class ConfigEditorController {
 
 		model.addObject("modules", getModules());
 
-		model.addObject("configCtrlPageModel", new ConfigCtrlPageModel());
+		model.addObject("selectedModuleId", 0);
 
 		model.addObject("formMessage", formMessage);
 
@@ -110,29 +102,56 @@ public class ConfigEditorController {
 		return model;
 	}
 
-	@RequestMapping(method = RequestMethod.POST)
-	public ModelAndView setConfig(@ModelAttribute("configCtrlPageModel") @Valid ConfigCtrlPageModel configCtrlPageModel,
-			BindingResult bindingResult) {
-		ModelAndView model = new ModelAndView("ConfigEditor");
+	@RequestMapping(value = "/selectmodule", method = RequestMethod.POST)
+	public ModelAndView selectModule(@RequestBody(required = false) JsonNode jsonNode, Model modelll) {
+		Map<String, ModuleManager> configPlugins = configCtrlService.availableModules();
 
-		Map<String, ConfigPluginWrapper> configPlugins = configCtrlService.availableConfigPlugins();
+		ModelAndView model = new ModelAndView("ConfigEditor :: top-container");
 
 		Set<String> modules = configPlugins.keySet();
 
 		model.addObject("modules", modules);
 
-		if (configCtrlPageModel.getSelectedConfigPluginWrapperId() != null) {
-			ConfigPluginWrapper configPluginWrapper = configPlugins
-					.get(configCtrlPageModel.getSelectedConfigPluginWrapperId());
+		if (jsonNode.has("selectedModuleId")) {
+			String selectedModuleId = jsonNode.findValue("selectedModuleId").textValue();
 
-			model.addObject("configs", configPluginWrapper.getEditableConfigPlugin().configTypes().keySet());
+			ModuleManager configPluginWrapper = configPlugins.get(selectedModuleId);
 
-			if (configCtrlPageModel.getSelectedConfigId() != null) {
-				loadColumnNames(configCtrlPageModel.getSelectedConfigId(), configPluginWrapper, model);
+			if (configPluginWrapper != null) {
+				model.addObject("tables", configPluginWrapper.getTableManager().configTypes().keySet());
+
+				model.addObject("selectedModuleId", selectedModuleId);
 			}
 		}
 
-		model.addObject("configCtrlPageModel", configCtrlPageModel);
+		model.addObject("headerTitle", headerTitle);
+
+		model.addObject("footerTitle", footerTitle);
+
+		model.addObject("loingdetailsShow", loingdetailsShow);
+
+		return model;
+	}
+
+	@RequestMapping(value = "/selecttable", method = RequestMethod.POST)
+	public ModelAndView selectTable(@RequestBody(required = false) JsonNode jsonNode, Model modell) {
+		Map<String, ModuleManager> configPlugins = configCtrlService.availableModules();
+
+		Set<String> modules = configPlugins.keySet();
+
+		ModelAndView model = new ModelAndView("ConfigEditor :: view-table-and-editor");
+
+		model.addObject("modules", modules);
+
+		if (jsonNode.has("selectedTableId")) {
+			String selectedModuleId = jsonNode.findValue("selectedModuleId").textValue();
+
+			ModuleManager configPluginWrapper = configPlugins.get(selectedModuleId);
+
+			String selectedTableId = jsonNode.findValue("selectedTableId").textValue();
+
+			loadColumnNames(selectedTableId, configPluginWrapper, model);
+		}
 
 		model.addObject("formMessage", formMessage);
 
@@ -146,210 +165,31 @@ public class ConfigEditorController {
 
 		model.addObject("loingdetailsShow", loingdetailsShow);
 
-		model.addObject("editRow", contextPath + "/editRow/");
-
-		model.addObject("contextPath", contextPath);
-
 		return model;
 	}
 
-	// @RequestMapping(method = RequestMethod.POST, path = "")
-	// public ModelAndView setConfig(@ModelAttribute("configCtrlPageModel") @Valid
-	// ConfigCtrlPageModel configCtrlPageModel,
-	// BindingResult bindingResult) {
-	// try {
-	// if (configCtrlPageModel.getSelectedConfigPluginWrapperId() != null
-	// && !configCtrlPageModel.getSelectedConfigPluginWrapperId().equals("0")
-	// && !configCtrlPageModel.getSelectedConfigPluginWrapperId()
-	// .equals(this.configCtrlPageModel.getSelectedConfigPluginWrapperId())) {
-	// this.configCtrlPageModel
-	// .setSelectedConfigPluginWrapperId(configCtrlPageModel.getSelectedConfigPluginWrapperId());
-	//
-	// Map<String, ConfigPluginWrapper> configPlugins =
-	// configCtrlService.availableConfigPlugins();
-	// this.selectedConfigPluginWrapper = configPlugins
-	// .get(this.configCtrlPageModel.getSelectedConfigPluginWrapperId());
-	//
-	// this.currentConfigPlugin =
-	// this.selectedConfigPluginWrapper.getEditableConfigPlugin();
-	// this.configs = this.currentConfigPlugin != null ?
-	// this.currentConfigPlugin.configTypes().keySet()
-	// : new HashSet<String>(0);
-	// } else if (configCtrlPageModel.getSelectedConfigPluginWrapperId() != null
-	// && (configCtrlPageModel.getSelectedConfigPluginWrapperId().equals("0")
-	// && !"0".equals(this.configCtrlPageModel.getSelectedConfigPluginWrapperId())))
-	// {
-	// this.configCtrlPageModel.setSelectedConfigPluginWrapperId("0");
-	// this.selectedConfigPluginWrapper = null;
-	// this.configs = null;
-	//
-	// this.configCtrlPageModel.setSelectedConfigId("0");
-	// this.currentConfigPlugin = null;
-	// this.columnNames = null;
-	// this.columnValues = null;
-	//
-	// this.editorModel = null;
-	// }
-	//
-	// if (configCtrlPageModel.getSelectedConfigId() != null
-	// && !configCtrlPageModel.getSelectedConfigId().equals("0") &&
-	// !configCtrlPageModel
-	// .getSelectedConfigId().equals(this.configCtrlPageModel.getSelectedConfigId()))
-	// {
-	// this.configCtrlPageModel.setSelectedConfigId(configCtrlPageModel.getSelectedConfigId());
-	//
-	// // loadColumnNames(this.configCtrlPageModel.getSelectedConfigId());
-	//
-	// this.columnNames = null;
-	// this.columnValues = null;
-	//
-	// this.editorModel = null;
-	// } else {
-	// this.configCtrlPageModel.setSelectedConfigId("0");
-	// this.currentConfigPlugin = null;
-	// this.columnNames = null;
-	// this.columnValues = null;
-	//
-	// this.editorModel = null;
-	// }
-	//
-	// updateViewModel();
-	// } catch (Exception ex) {
-	// loadFormMessageError(ex.getMessage());
-	// }
-	//
-	// ModelAndView modelv = new ModelAndView("redirect:/config");
-	// return modelv;
-	// }
+	@RequestMapping(value = { "/add" }, method = RequestMethod.POST)
+	public ModelAndView add(@RequestBody(required = false) JsonNode jsonNode, BindingResult bindingResult) {
+		Map<String, ModuleManager> configPlugins = configCtrlService.availableModules();
 
-	@RequestMapping(value = { "/editRow/{editRowId}" }, method = RequestMethod.POST)
-	public ModelAndView editRow(@PathVariable("editRowId") String editRowId,
-			@ModelAttribute("configCtrlPageModel") @Valid ConfigCtrlPageModel configCtrlPageModel,
-			BindingResult bindingResult) {
-		loadEditorModel(editRowId);
+		Set<String> modules = configPlugins.keySet();
 
-		ModelAndView modelv = new ModelAndView("ConfigEditor");
-		return modelv;
-	}
+		ModelAndView model = new ModelAndView("ConfigEditor :: result-editor");
 
-	@RequestMapping(value = { "/deleteRow/{editRowId}" }, method = RequestMethod.POST)
-	public ModelAndView deleteRow(@PathVariable("editRowId") String editRowId) {
-		delete(editRowId);
+		model.addObject("modules", modules);
 
-		ModelAndView modelv = new ModelAndView("redirect:/config");
-		return modelv;
-	}
+		if (jsonNode.has("selectedTableId")) {
+			String selectedModuleId = jsonNode.findValue("selectedModuleId").textValue();
 
-	private void delete(String editRowId) {
-		if (selectedConfigPluginWrapper != null) {
-			EditableConfigPlugin editableConfigPlugin = this.selectedConfigPluginWrapper.getEditableConfigPlugin();
+			ModuleManager configPluginWrapper = configPlugins.get(selectedModuleId);
 
-			Class<?> selectedConfigType = editableConfigPlugin.configTypes()
-					.get(this.configCtrlPageModel.getSelectedConfigId());
+			TableManager editableConfigPlugin = configPluginWrapper.getTableManager();
 
-			if (selectedConfigType != null) {
-				try {
-					editableConfigPlugin.removeConfigEntry(this.configCtrlPageModel.getSelectedConfigId(), editRowId);
+			String selectedTableId = jsonNode.findValue("selectedTableId").textValue();
 
-					loadFormMessageInfo("SUCESSFULLY DELETED.");
+			Class<?> selectedConfigType = editableConfigPlugin.configTypes().get(selectedTableId);
 
-					updateViewModel();
-				} catch (Exception e) {
-					loadFormMessageError(e.getMessage());
-				}
-			}
-		}
-	}
-
-	@RequestMapping(value = { "/editor/save" }, method = RequestMethod.POST)
-	public ModelAndView editorSave(@ModelAttribute("editorModel") @Valid EditorModel editorModel,
-			@RequestBody String requestBody, BindingResult bindingResult) {
-		int from = requestBody.indexOf("saveFormReq=");
-		int to = requestBody.indexOf("&", from);
-		String substring = requestBody.substring(from, to < 0 ? requestBody.length() : to);
-
-		this.editorModel = editorModel;
-
-		if ("saveFormReq=cancel".equalsIgnoreCase(substring)) {
-			this.editorModel = null;
-		} else {
-			try {
-
-				EditableConfigPlugin editableConfigPlugin = this.selectedConfigPluginWrapper.getEditableConfigPlugin();
-
-				Map<String, Object> configDataFor;
-
-				configDataFor = editableConfigPlugin.findConfigDataFor(this.configCtrlPageModel.getSelectedConfigId());
-				Class<?> class1 = editableConfigPlugin.configTypes()
-						.get(this.configCtrlPageModel.getSelectedConfigId());
-
-				Map<String, FieldDetails> fields = findAllEditableFields(class1);
-
-				Object object = null;
-				if (editorModel.getEditType() == EditType.UPDATE)
-					object = configDataFor.get(editorModel.getEditId());
-				else if (editorModel.getEditType() == EditType.NEW)
-					object = editableConfigPlugin.newConfigEntry(this.configCtrlPageModel.getSelectedConfigId());
-
-				boolean isInvalidInputData = false;
-				for (EditorField<?> editorField : editorModel.getEditorFields()) {
-					try {
-						FieldDetails field = fields.get(editorField.getName());
-
-						field.field.setAccessible(true);
-
-						Object convertString = convertString(field.field.getType(), editorField.getValue());
-
-						field.field.set(object, convertString);
-					} catch (SecurityException | IllegalArgumentException | IllegalAccessException e) {
-						isInvalidInputData = true;
-						logger.log(Level.SEVERE, e.getMessage());
-					}
-				}
-
-				if (isInvalidInputData)
-					throw new EditableConfigException(ProcessFailType.VALIDATION_FALIED,
-							"Please check, some input data types invalid.");
-
-				if (editorModel.getEditType() == EditType.UPDATE) {
-					editableConfigPlugin.updateConfigEntry(this.configCtrlPageModel.getSelectedConfigId(),
-							editorModel.getEditId(), object);
-
-					loadFormMessageInfo("SUCESSFULLY UPDATED.");
-				} else if (editorModel.getEditType() == EditType.NEW) {
-					KeyValue saveEntry = editableConfigPlugin.saveConfigEntry(
-							this.configCtrlPageModel.getSelectedConfigId(), editorModel.getEditId(), object);
-
-					this.editorModel = generateEditorModel(saveEntry.getKey(), saveEntry.getValue(), class1,
-							EditType.NEW);
-
-					loadFormMessageInfo("SUCESSFULLY SAVED.");
-				}
-
-			} catch (EditableConfigException e) {
-
-				loadFormMessageError(e.getMessage());
-				logger.log(Level.SEVERE, e.getMessage(), e);
-			} catch (Exception ex) {
-				loadFormMessageError(ex.getMessage());
-				logger.log(Level.SEVERE, ex.getMessage(), ex);
-			}
-
-			updateViewModel();
-
-		}
-
-		ModelAndView modelv = new ModelAndView("redirect:/config");
-		return modelv;
-	}
-
-	@RequestMapping(value = { "/newEntry" }, method = RequestMethod.POST)
-	public ModelAndView newEntry(@RequestBody String body, BindingResult bindingResult) {
-		if (selectedConfigPluginWrapper != null) {
-			EditableConfigPlugin editableConfigPlugin = this.selectedConfigPluginWrapper.getEditableConfigPlugin();
-
-			Class<?> selectedConfigType = editableConfigPlugin.configTypes()
-					.get(this.configCtrlPageModel.getSelectedConfigId());
+			EditorModel editorModel = null;
 
 			if (selectedConfigType != null) {
 				try {
@@ -357,7 +197,7 @@ public class ConfigEditorController {
 
 					Map<String, FieldDetails> allEditableFields = findAllEditableFields(selectedConfigType);
 
-					Object object = editableConfigPlugin.newConfigEntry(this.configCtrlPageModel.getSelectedConfigId());
+					Object object = editableConfigPlugin.newRowEntry(selectedTableId);
 
 					for (FieldDetails field : allEditableFields.values()) {
 						if (field.configEditorEditable.isEditable()) {
@@ -383,10 +223,197 @@ public class ConfigEditorController {
 					loadFormMessageError(e.getMessage());
 				}
 			}
+
+			model.addObject("editorModel", editorModel);
 		}
 
-		ModelAndView modelv = new ModelAndView("redirect:/config");
-		return modelv;
+		return model;
+
+	}
+
+	@RequestMapping(value = { "/editor/save" }, method = RequestMethod.POST)
+	public ModelAndView editorSave(@RequestBody JsonNode requestBody, BindingResult bindingResult) {
+		ModelAndView model = new ModelAndView("ConfigEditor :: result-editor");
+
+		try {
+			Map<String, ModuleManager> configPlugins = configCtrlService.availableModules();
+
+			Set<String> modules = configPlugins.keySet();
+
+			model.addObject("modules", modules);
+
+			if (requestBody.has("selectedTableId")) {
+				String selectedModuleId = requestBody.findValue("selectedModuleId").textValue();
+				String selectedTableId = requestBody.findValue("selectedTableId").textValue();
+				JsonNode formData = requestBody.get("formData");
+
+				ModuleManager configPluginWrapper = configPlugins.get(selectedModuleId);
+
+				TableManager tableManager = configPluginWrapper.getTableManager();
+
+				Class<?> selectedTableType = tableManager.configTypes().get(selectedTableId);
+
+				Map<String, Object> records = tableManager.findRecordsFor(selectedTableId);
+
+				Map<String, FieldDetails> fields = findAllEditableFields(selectedTableType);
+
+				EditorModel editorModel = convertToEditorModel(formData);
+
+				Object object = null;
+				if (EditType.UPDATE.name().equals(formData.findValue("editType").textValue()))
+					object = records.get(editorModel.getEditId());
+				else if (EditType.NEW.name().equals(formData.findValue("editType").textValue()))
+					object = tableManager.newRowEntry(selectedTableId);
+
+				boolean isInvalidInputData = false;
+				for (EditorField<?> editorField : editorModel.getEditorFields()) {
+					try {
+						FieldDetails field = fields.get(editorField.getName());
+
+						field.field.setAccessible(true);
+
+						Object convertString = convertString(field.field.getType(), editorField.getValue());
+
+						field.field.set(object, convertString);
+					} catch (SecurityException | IllegalArgumentException | IllegalAccessException e) {
+						isInvalidInputData = true;
+						logger.log(Level.SEVERE, e.getMessage());
+					}
+				}
+
+				if (isInvalidInputData)
+					throw new EditableConfigException(ProcessFailType.VALIDATION_FALIED,
+							"Please check, some input data types invalid.");
+
+				if (editorModel.getEditType() == EditType.UPDATE) {
+					KeyValue saveEntry = tableManager.updateConfigEntry(selectedTableId, editorModel.getEditId(),
+							object);
+
+					model.addObject("editorModel", generateEditorModel(saveEntry.getKey(), saveEntry.getValue(),
+							selectedTableType, EditType.UPDATE));
+
+					loadColumnNames(selectedTableId, configPluginWrapper, model);
+
+					model.setViewName("ConfigEditor :: view-table-and-editor");
+				} else if (editorModel.getEditType() == EditType.NEW) {
+					KeyValue saveEntry = tableManager.saveConfigEntry(selectedTableId, editorModel.getEditId(), object);
+
+					model.addObject("editorModel", generateEditorModel(saveEntry.getKey(), saveEntry.getValue(),
+							selectedTableType, EditType.UPDATE));
+
+					loadColumnNames(selectedTableId, configPluginWrapper, model);
+
+					model.setViewName("ConfigEditor :: view-table-and-editor");
+				}
+			}
+
+		} catch (EditableConfigException e) {
+
+			loadFormMessageError(e.getMessage());
+			logger.log(Level.SEVERE, e.getMessage(), e);
+		} catch (Exception ex) {
+			loadFormMessageError(ex.getMessage());
+			logger.log(Level.SEVERE, ex.getMessage(), ex);
+		}
+
+		return model;
+	}
+
+	@RequestMapping(value = "/edit", method = RequestMethod.POST)
+	public ModelAndView editRow(@RequestBody(required = false) JsonNode jsonNode, Model modell) {
+		ModelAndView model = new ModelAndView("ConfigEditor :: result-editor");
+
+		Map<String, ModuleManager> configPlugins = configCtrlService.availableModules();
+
+		Set<String> modules = configPlugins.keySet();
+
+		model.addObject("modules", modules);
+
+		if (jsonNode.has("selectedTableId")) {
+			String selectedModuleId = jsonNode.findValue("selectedModuleId").textValue();
+
+			ModuleManager configPluginWrapper = configPlugins.get(selectedModuleId);
+
+			String selectedTableId = jsonNode.findValue("selectedTableId").textValue();
+
+			TableManager editableConfigPlugin = configPluginWrapper.getTableManager();
+
+			Class<?> selectedConfigType = editableConfigPlugin.configTypes().get(selectedTableId);
+
+			if (selectedConfigType != null) {
+				try {
+					String editId = jsonNode.findValue("editId").textValue();
+
+					Object object = editableConfigPlugin.findConfig(selectedTableId, editId);
+
+					EditorModel editorModel = generateEditorModel(editId, object, selectedConfigType, EditType.UPDATE);
+
+					model.addObject("editorModel", editorModel);
+				} catch (Exception e) {
+					loadFormMessageError(e.getMessage());
+				}
+			}
+		}
+
+		return model;
+	}
+
+	@RequestMapping(value = { "/editor/clear" }, method = RequestMethod.POST)
+	public ModelAndView editorClear(@RequestBody JsonNode requestBody, BindingResult bindingResult) {
+		ModelAndView model = new ModelAndView("ConfigEditor :: result-editor");
+
+		model.addObject("editorModel", null);
+
+		return model;
+	}
+
+	@RequestMapping(value = "/delete", method = RequestMethod.POST)
+	public String deleteRow(@RequestBody(required = false) JsonNode jsonNode, Model model) {
+		Map<String, ModuleManager> configPlugins = configCtrlService.availableModules();
+
+		Set<String> modules = configPlugins.keySet();
+
+		model.addAttribute("modules", modules);
+
+		if (jsonNode.has("selectedTableId")) {
+			String selectedModuleId = jsonNode.findValue("selectedModuleId").textValue();
+
+			ModuleManager configPluginWrapper = configPlugins.get(selectedModuleId);
+
+			String selectedTableId = jsonNode.findValue("selectedTableId").textValue();
+
+			TableManager editableConfigPlugin = configPluginWrapper.getTableManager();
+
+			Class<?> selectedConfigType = editableConfigPlugin.configTypes().get(selectedTableId);
+
+			if (selectedConfigType != null) {
+				try {
+					String deleteId = jsonNode.findValue("deleteId").textValue();
+
+					editableConfigPlugin.removeConfigEntry(selectedTableId, deleteId);
+
+					loadFormMessageInfo("SUCESSFULLY DELETED.");
+
+					loadColumnNames(selectedTableId, configPluginWrapper, model);
+				} catch (Exception e) {
+					loadFormMessageError(e.getMessage());
+				}
+			}
+		}
+
+		model.addAttribute("formMessage", formMessage);
+
+		model.addAttribute("formErrorMessage", formErrorMessage);
+
+		model.addAttribute("formMessageSetAtRefreshCount", formMessageSetAtRefreshCount);
+
+		model.addAttribute("headerTitle", headerTitle);
+
+		model.addAttribute("footerTitle", footerTitle);
+
+		model.addAttribute("loingdetailsShow", loingdetailsShow);
+
+		return "ConfigEditor :: result-view-table";
 	}
 
 	public EditorModel generateEditorModel(String editKey, Object object, Class<?> selectedConfigType,
@@ -416,6 +443,28 @@ public class ConfigEditorController {
 
 		} catch (IllegalArgumentException | IllegalAccessException e) {
 			logger.log(Level.SEVERE, e.getMessage(), e);
+		}
+
+		return editorModel;
+	}
+
+	private EditorModel convertToEditorModel(JsonNode jsonNode) {
+		EditorModel editorModel = new EditorModel();
+
+		editorModel.setEditId(jsonNode.findValue("editId").textValue());
+		editorModel.setEditType(EditType.valueOf(jsonNode.findValue("editType").textValue()));
+
+		editorModel.setEditorFields(new ArrayList<>());
+		for (int i = 0;; i++) {
+			String prefix = "editorFields[" + i + "].";
+			if (jsonNode.has("editorFields[" + i + "]." + "name")) {
+				EditorField<?> editorField = new EditorField<>();
+				editorField.setName(jsonNode.findValue(prefix + "name").textValue());
+				editorField.setValue(jsonNode.findValue(prefix + "value").textValue());
+
+				editorModel.add(editorField);
+			} else
+				break;
 		}
 
 		return editorModel;
@@ -469,8 +518,8 @@ public class ConfigEditorController {
 		}
 	}
 
-	public void loadColumnNames(String selectedConfigId2, ConfigPluginWrapper configPluginWrapper, ModelAndView model) {
-		EditableConfigPlugin editableConfigPlugin = configPluginWrapper.getEditableConfigPlugin();
+	public void loadColumnNames(String selectedConfigId2, ModuleManager configPluginWrapper, Model model) {
+		TableManager editableConfigPlugin = configPluginWrapper.getTableManager();
 
 		Class<?> selectedConfigType = editableConfigPlugin.configTypes().get(selectedConfigId2);
 
@@ -481,7 +530,52 @@ public class ConfigEditorController {
 
 				Map<String, FieldDetails> allEditableFields = findAllEditableFields(selectedConfigType);
 
-				Map<String, Object> configDataFor = editableConfigPlugin.findConfigDataFor(selectedConfigId2);
+				Map<String, Object> configDataFor = editableConfigPlugin.findRecordsFor(selectedConfigId2);
+
+				for (Object key : configDataFor.keySet()) {
+					Object object = configDataFor.get(key);
+
+					List<Object> values = new ArrayList<Object>();
+					for (FieldDetails field : allEditableFields.values()) {
+						if (field.configEditorEditable.isViewableOnTable()) {
+							field.field.setAccessible(true);
+							Object fieldValue = field.field.get(object);
+
+							values.add(fieldValue);
+							if (!columnNames.contains(field.field.getName()))
+								columnNames.add(field.field.getName());
+						}
+					}
+
+					ColumnValue e = new ColumnValue();
+					e.setId(key);
+					e.setValues(values);
+
+					columnValues.add(e);
+				}
+
+				model.addAttribute("columnNames", columnNames);
+				model.addAttribute("columnValues", columnValues);
+			} catch (EditableConfigException | IllegalArgumentException | IllegalAccessException ex) {
+				logger.log(Level.SEVERE, ex.getMessage());
+			}
+		}
+
+	}
+
+	public void loadColumnNames(String selectedConfigId2, ModuleManager configPluginWrapper, ModelAndView model) {
+		TableManager editableConfigPlugin = configPluginWrapper.getTableManager();
+
+		Class<?> selectedConfigType = editableConfigPlugin.configTypes().get(selectedConfigId2);
+
+		if (selectedConfigType != null) {
+			try {
+				ArrayList<String> columnNames = new ArrayList<>();
+				ArrayList<ColumnValue> columnValues = new ArrayList<>();
+
+				Map<String, FieldDetails> allEditableFields = findAllEditableFields(selectedConfigType);
+
+				Map<String, Object> configDataFor = editableConfigPlugin.findRecordsFor(selectedConfigId2);
 
 				for (Object key : configDataFor.keySet()) {
 					Object object = configDataFor.get(key);
@@ -514,120 +608,8 @@ public class ConfigEditorController {
 
 	}
 
-	// public void loadColumnNames(String selectedConfigId2) {
-	// if (selectedConfigPluginWrapper != null) {
-	// EditableConfigPlugin editableConfigPlugin =
-	// selectedConfigPluginWrapper.getEditableConfigPlugin();
-	//
-	// Class<?> selectedConfigType =
-	// editableConfigPlugin.configTypes().get(selectedConfigId2);
-	//
-	// if (selectedConfigType != null) {
-	// try {
-	// columnNames = new ArrayList<>();
-	//
-	// Map<String, FieldDetails> allEditableFields =
-	// findAllEditableFields(selectedConfigType);
-	//
-	// columnValues = new ArrayList<>();
-	//
-	// Map<String, Object> configDataFor =
-	// editableConfigPlugin.findConfigDataFor(selectedConfigId2);
-	//
-	// for (Object key : configDataFor.keySet()) {
-	// Object object = configDataFor.get(key);
-	//
-	// List<Object> values = new ArrayList<Object>();
-	// for (FieldDetails field : allEditableFields.values()) {
-	// if (field.configEditorEditable.isViewableOnTable()) {
-	// field.field.setAccessible(true);
-	// Object fieldValue = field.field.get(object);
-	//
-	// values.add(fieldValue);
-	// if (!columnNames.contains(field.field.getName()))
-	// columnNames.add(field.field.getName());
-	// }
-	// }
-	//
-	// ColumnValue e = new ColumnValue();
-	// e.setId(key);
-	// e.setValues(values);
-	//
-	// columnValues.add(e);
-	// }
-	// } catch (EditableConfigException | IllegalArgumentException |
-	// IllegalAccessException ex) {
-	// logger.log(Level.SEVERE, ex.getMessage());
-	// }
-	// }
-	// }
-	// }
-
-	private void loadEditorModel(String editRowId) {
-		if (editRowId != null) {
-			if (selectedConfigPluginWrapper != null) {
-				EditableConfigPlugin editableConfigPlugin = this.selectedConfigPluginWrapper.getEditableConfigPlugin();
-
-				Class<?> selectedConfigType = editableConfigPlugin.configTypes()
-						.get(this.configCtrlPageModel.getSelectedConfigId());
-
-				if (selectedConfigType != null) {
-					try {
-						editorModel = new EditorModel(editRowId, new ArrayList<EditorField<?>>(), EditType.UPDATE);
-
-						Map<String, FieldDetails> allEditableFields = findAllEditableFields(selectedConfigType);
-
-						Map<String, Object> configDataFor = editableConfigPlugin
-								.findConfigDataFor(this.configCtrlPageModel.getSelectedConfigId());
-
-						Object object = configDataFor.get(editRowId);
-
-						if (object == null) {
-							logger.log(Level.WARNING, "No config record found for " + editRowId);
-							return;
-						}
-
-						for (FieldDetails field : allEditableFields.values()) {
-							Object fieldValue = field.field.get(object);
-							Class<?> ss = field.field.getType();
-
-							try {
-								String stringValue = fieldValue != null ? convertToString(ss, fieldValue) : null;
-
-								editorModel.add(new EditorField<>(field.field.getName(), ss, stringValue, field.field,
-										field.configEditorEditable));
-							} catch (HandledException ex) {
-								logger.log(Level.SEVERE, ex.getMessage());
-							}
-						}
-
-					} catch (EditableConfigException | IllegalArgumentException | IllegalAccessException e) {
-						logger.log(Level.SEVERE, e.getMessage());
-					}
-				}
-			} else {
-				editorModel = null;
-			}
-		} else {
-			if (editorModel != null && editorModel.getEditType() == EditType.NEW) {
-				editorModel = new EditorModel(null, editorModel.getEditorFields(), EditType.NEW);
-			}
-		}
-	}
-
-	private void updateViewModel() {
-		// if (this.configCtrlPageModel != null)
-		// // loadColumnNames(this.configCtrlPageModel.getSelectedConfigId());
-
-		if (this.configCtrlPageModel != null && this.editorModel != null && this.editorModel.getEditId() != null
-				&& !this.editorModel.getEditId().isEmpty())
-			loadEditorModel(this.editorModel.getEditId());
-		else
-			loadEditorModel(null);
-	}
-
 	public Set<String> getModules() {
-		Map<String, ConfigPluginWrapper> configPlugins = configCtrlService.availableConfigPlugins();
+		Map<String, ModuleManager> configPlugins = configCtrlService.availableModules();
 
 		return configPlugins.keySet();
 	}
@@ -667,259 +649,10 @@ public class ConfigEditorController {
 		return fields;
 	}
 
-	public Map<String, FieldDetails> findAllViewOnlyFields(Class<?> selectedConfigType) {
-		Map<String, FieldDetails> fields = new HashMap<>();
-
-		for (Class<?> cc = selectedConfigType; cc != null; cc = cc.getSuperclass()) {
-			for (Field field : cc.getDeclaredFields()) {
-				ConfigEditorField configEditorEditable = field.getAnnotation(ConfigEditorField.class);
-
-				if (configEditorEditable != null) {
-					field.setAccessible(true);
-					FieldDetails fieldDetails = new FieldDetails();
-
-					fieldDetails.configEditorEditable = configEditorEditable;
-					fieldDetails.field = field;
-
-					fields.put(field.getName(), fieldDetails);
-				}
-			}
-		}
-
-		return fields;
-
-	}
-
 	class FieldDetails {
 		ConfigEditorField configEditorEditable;
 
 		Field field;
 	}
-
-	// @RequestMapping(value = "/config", method = RequestMethod.POST)
-	// public String saveStudent(@RequestAttribute(name
-	// ="selectedConfigPluginWrapperId") String selectedConfigPluginWrapperId,
-	// @ModelAttribute(value = "this") ConfigEditorController oo,
-	// @ModelAttribute(value = "Sex") ConfigEditorController oo1, Model model,
-	// BindingResult errors) {
-	// Map<String, Object> asMap = model.asMap();
-	// asMap.get("dfs");
-	// if (oo.selectedConfigPluginWrapperId != null &&
-	// !oo.selectedConfigPluginWrapperId.equals("0")
-	// &&
-	// !oo.selectedConfigPluginWrapperId.equals(selectedConfigPluginWrapperId))
-	// {
-	// Map<String, ConfigPluginWrapper> configPlugins =
-	// configCtrlService.availableConfigPlugins();
-	//
-	// selectedConfigPluginWrapper =
-	// configPlugins.get(oo.selectedConfigPluginWrapperId);
-	//
-	// EditableConfigPlugin configPlugin =
-	// selectedConfigPluginWrapper.getEditableConfigPlugin();
-	//
-	// selectedConfigPluginWrapperId = oo.selectedConfigPluginWrapperId;
-	// this.configs = configPlugin.configTypes() != null ?
-	// configPlugin.configTypes().keySet()
-	// : new HashSet<String>(0);
-	//
-	// model.addAttribute("selectedConfigPluginWrapperId",
-	// oo.selectedConfigPluginWrapperId);
-	// model.addAttribute("selectedConfigPluginWrapper",
-	// selectedConfigPluginWrapper);
-	// model.addAttribute("configs",
-	// configPlugin.configTypes() != null ? configPlugin.configTypes().keySet()
-	// : new HashSet<String>(0));
-	//
-	// selectedConfigId = "0";
-	// model.addAttribute("selectedConfigId", "0");
-	// oo.selectedConfigId = "0";
-	//
-	// model.addAttribute("this", oo);
-	// }
-	//
-	// if (oo.selectedConfigId != null &&
-	// !oo.selectedConfigId.equals(selectedConfigId)) {
-	// selectedConfigId = oo.selectedConfigId;
-	// model.addAttribute("selectedConfigId", oo.selectedConfigId);
-	//
-	// loadColumnNames(model, oo.selectedConfigId);
-	//
-	// model.addAttribute("this", oo);
-	// }
-	//
-	// return "ConfigEditor";
-	// }
-
-	@RequestMapping(value = "/edit", method = RequestMethod.GET)
-	public String saveeStudent(Model model) {
-
-		return "ConfigEditor";
-	}
-
-	// @ModelAttribute("selectedConfigPluginWrapperId")
-	// public String getSelectedConfigPluginWrapperId() {
-	// return selectedConfigPluginWrapperId;
-	// }
-	//
-	// public void setSelectedConfigPluginWrapperId(
-	// @ModelAttribute("selectedConfigPluginWrapperId") String
-	// selectedConfigPluginWrapperId) {
-	//
-	// }
-
-	// @ModelAttribute("configs")
-	// public Set<String> getConfigs() {
-	// return configs;
-	// }
-	//
-	// // @ModelAttribute("selectedConfigPluginWrapperId")
-	// // public String selectedConfigPluginWrapperId() {
-	// // return selectedConfigPluginWrapperId;
-	// // }
-	// //
-	// // @ModelAttribute("selectedConfigId")
-	// // public String selectedConfigId() {
-	// // return selectedConfigId;
-	// // }
-	//
-	// @ModelAttribute("modules")
-	// public Set<String> modules() {
-	// Map<String, ConfigPluginWrapper> configPlugins =
-	// configCtrlService.availableConfigPlugins();
-	//
-	// return configPlugins.keySet();
-	// }
-	//
-	// public boolean isSelectedConfigTypeModel(String userId) {
-	// if (selectedConfigId != null) {
-	// return selectedConfigId.equals(userId);
-	// }
-	// return false;
-	// }
-	//
-	// public boolean isSelectedConfigModel(String userId) {
-	// if (selectedConfigPluginWrapperId != null) {
-	// return selectedConfigPluginWrapperId.equals(userId);
-	// }
-	// return false;
-	// }
-	//
-	// @ModelAttribute("smokeTests")
-	// public Map<String, String> allUsers1() {
-	// Map<String, String> map = new HashMap<String, String>();
-	//
-	// map.put("key1", "value1");
-	// map.put("key2", "value2");
-	// map.put("key3", "value3");
-	//
-	// return map;
-	// }
-	//
-	// @ModelAttribute("values")
-	// public List<ColumnValue> values() {
-	// List<ColumnValue> values = new ArrayList();
-	//
-	// for (int i = 0; i < 10; i++) {
-	// ColumnValue value = new ColumnValue();
-	// value.setId("" + i);
-	//
-	// List<Object> userList = new ArrayList();
-	//
-	// userList.add("Value1");
-	// userList.add("Value2");
-	//
-	// value.setValues(userList);
-	//
-	// values.add(value);
-	// }
-	//
-	// return values;
-	// }
-	//
-	// public String getSelectedModule() {
-	// return this.selectedModule;
-	// }
-	//
-	// public String setSelectedModule(@ModelAttribute("selectedModule") String
-	// selectedModule) {
-	// this.selectedModule = selectedModule;
-	//
-	// return this.selectedModule;
-	// }
-	//
-	// @RequestMapping(value = "/saveStudent", method = RequestMethod.POST)
-	// public String saveStudent(@ModelAttribute User student, BindingResult
-	// errors, Model model) {
-	// return "Saved";
-	// }
-	//
-	// @RequestMapping(value = "/showForm", method = RequestMethod.GET)
-	// public String showForm(Model model) {
-	// Foo foo = new Foo();
-	// foo.setBar("bar");
-	// foo.setBoo("boo1");
-	//
-	// model.addAttribute("foo", foo);
-	//
-	// return "ConfigEditor2";
-	// }
-	//
-	// @RequestMapping(value = "/processForm", method = RequestMethod.POST)
-	// public String processForm(@ModelAttribute(value = "foo") Foo foo) {
-	// foo.getBar();
-	//
-	// return "ConfigEditor2";
-	// }
-	//
-	// class DTO {
-	// public String name;
-	// }
-	//
-	// @ModelAttribute("selectedConfigPluginWrapperId")
-	// public String getSelectedConfigPluginWrapperId() {
-	// return selectedConfigPluginWrapperId;
-	// }
-	//
-	// public void
-	// setSelectedConfigPluginWrapperId(@ModelAttribute("selectedConfigPluginWrapperId")
-	// String selectedConfigPluginWrapperId) {
-	// this.selectedConfigPluginWrapperId = selectedConfigPluginWrapperId;
-	// }
-	//
-	// @ModelAttribute("selectedConfigId")
-	// public String getSelectedConfigId() {
-	// return selectedConfigId;
-	// }
-	//
-	// public void setSelectedConfigId(String selectedConfigId) {
-	// this.selectedConfigId = selectedConfigId;
-	// }
-	//
-	// public Object getSelectedRowId() {
-	// return selectedRowId;
-	// }
-	//
-	// public void setSelectedRowId(Object selectedRowId) {
-	// this.selectedRowId = selectedRowId;
-	// }
-	//
-	// @ModelAttribute("columnNames")
-	// public List<String> getColumnNames() {
-	// return columnNames;
-	// }
-	//
-	// public void setColumnNames(List<String> columnNames) {
-	// this.columnNames = columnNames;
-	// }
-	//
-	// @ModelAttribute("columnValues")
-	// public Set<ColumnValue> getColumnValues() {
-	// return columnValues;
-	// }
-	//
-	// public void setColumnValues(Set<ColumnValue> columnValues) {
-	// this.columnValues = columnValues;
-	// }
 
 }

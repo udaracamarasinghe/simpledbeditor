@@ -9,15 +9,15 @@ import org.uca.uies.api.simpledbeditorl.exceptions.EditableConfigException;
  * 
  * @Auther: Udara C Amarasinghe
  */
-public interface EditableConfigPlugin {
+public interface TableManager {
 
 	Map<String, Class<?>> configTypes();
 
 	Object findConfig(String configName, String key) throws EditableConfigException;
 
-	Map<String, Object> findConfigDataFor(String configName) throws EditableConfigException;
+	Map<String, Object> findRecordsFor(String configName) throws EditableConfigException;
 
-	Object newConfigEntry(String configName) throws EditableConfigException;
+	Object newRowEntry(String configName) throws EditableConfigException;
 
 	Object emptyConfigEntry(String configName) throws EditableConfigException;
 

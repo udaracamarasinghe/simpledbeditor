@@ -10,6 +10,10 @@ public class Person {
 	@ConfigEditorField(isEditable = true, isViewableOnTable = true)
 	private Integer age;
 
+	public Person() {
+		super();
+	}
+
 	public Person(String name, Integer age) {
 		super();
 		this.name = name;

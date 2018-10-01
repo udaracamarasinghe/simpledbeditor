@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Set;
 
-import org.uca.uies.api.simpledbeditorl.apis.EditableConfigPlugin;
+import org.uca.uies.api.simpledbeditorl.apis.TableManager;
 
 /*
  * 
@@ -18,7 +18,7 @@ public class ConfigCtrlPageModel implements Serializable {
 
 	public String selectedConfigId;
 
-	private EditableConfigPlugin currentConfigPlugin;
+	private TableManager currentConfigPlugin;
 
 	private Set<String> configs;
 
@@ -46,11 +46,11 @@ public class ConfigCtrlPageModel implements Serializable {
 		this.selectedConfigId = selectedConfigId;
 	}
 
-	public EditableConfigPlugin getCurrentConfigPlugin() {
+	public TableManager getCurrentConfigPlugin() {
 		return currentConfigPlugin;
 	}
 
-	public void setCurrentConfigPlugin(EditableConfigPlugin currentConfigPlugin) {
+	public void setCurrentConfigPlugin(TableManager currentConfigPlugin) {
 		this.currentConfigPlugin = currentConfigPlugin;
 	}
 

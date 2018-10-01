@@ -2,39 +2,39 @@ package org.uca.uies.api.simpledbeditorl.dto;
 
 import java.io.Serializable;
 
-import org.uca.uies.api.simpledbeditorl.apis.EditableConfigPlugin;
+import org.uca.uies.api.simpledbeditorl.apis.TableManager;
 
 /*
  * 
  * @Auther: Udara C Amarasinghe
  */
-public class ConfigPluginWrapper implements Serializable {
+public class ModuleManager implements Serializable {
 
 	private static final long serialVersionUID = -2714461779886296036L;
 
-	private String pluginName;
+	private String moduleName;
 
-	private EditableConfigPlugin editableConfigPlugin;
+	private TableManager tableManager;
 
-	public String getPluginName() {
-		return pluginName;
+	public String getModuleName() {
+		return moduleName;
 	}
 
-	public void setPluginName(String pluginName) {
-		this.pluginName = pluginName;
+	public void setModuleName(String pluginName) {
+		this.moduleName = pluginName;
 	}
 
-	public EditableConfigPlugin getEditableConfigPlugin() {
-		return editableConfigPlugin;
+	public TableManager getTableManager() {
+		return tableManager;
 	}
 
-	public void setEditableConfigPlugin(EditableConfigPlugin editableConfigPlugin) {
-		this.editableConfigPlugin = editableConfigPlugin;
+	public void setTableManager(TableManager editableConfigPlugin) {
+		this.tableManager = editableConfigPlugin;
 	}
 
 	public boolean isSelected(String pluginName) {
 		if (pluginName != null) {
-			return this.pluginName.equals(pluginName);
+			return this.moduleName.equals(pluginName);
 		}
 		return false;
 	}
@@ -43,7 +43,7 @@ public class ConfigPluginWrapper implements Serializable {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((pluginName == null) ? 0 : pluginName.hashCode());
+		result = prime * result + ((moduleName == null) ? 0 : moduleName.hashCode());
 		return result;
 	}
 
@@ -55,11 +55,11 @@ public class ConfigPluginWrapper implements Serializable {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		ConfigPluginWrapper other = (ConfigPluginWrapper) obj;
-		if (pluginName == null) {
-			if (other.pluginName != null)
+		ModuleManager other = (ModuleManager) obj;
+		if (moduleName == null) {
+			if (other.moduleName != null)
 				return false;
-		} else if (!pluginName.equals(other.pluginName))
+		} else if (!moduleName.equals(other.moduleName))
 			return false;
 		return true;
 	}
