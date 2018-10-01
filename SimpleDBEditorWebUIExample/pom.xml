@@ -9,14 +9,28 @@
 	<version>1.0.RELEASE</version>
 	<packaging>jar</packaging>
 
-	<name>SimpleDBEditorWebUIExample</name>
-	<description>SimpleDBEditorWebUIExample</description>
+	<name>Simple DB Editor Web UI Example</name>
+	<description>Simple DB Editor Web UI Example</description>
+	<url>https://github.com/udaracamarasinghe/simpledbeditor</url>
+	<licenses>
+		<license>
+			<name>The Apache Software License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+		</license>
+	</licenses>
+	<developers>
+		<developer>
+			<name>Udara C Amarasinghe</name>
+			<email>udara.c.amarasinghe@gmail.com</email>
+			<organization>UCA.</organization>
+		</developer>
+	</developers>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>2.0.5.RELEASE</version>
-		<relativePath /> <!-- lookup parent from repository -->
+		<relativePath />
 	</parent>
 
 	<properties>

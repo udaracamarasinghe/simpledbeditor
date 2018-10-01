@@ -11,6 +11,20 @@
 
 	<name>SimpleDBEditorWebUI</name>
 	<description>Simple DB Editor Web UI</description>
+	<url>https://github.com/udaracamarasinghe/simpledbeditor</url>
+	<licenses>
+		<license>
+			<name>The Apache Software License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+		</license>
+	</licenses>
+	<developers>
+		<developer>
+			<name>Udara C Amarasinghe</name>
+			<email>udara.c.amarasinghe@gmail.com</email>
+			<organization>UCA.</organization>
+		</developer>
+	</developers>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
