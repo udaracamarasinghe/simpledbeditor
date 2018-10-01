@@ -238,13 +238,13 @@ footer {
 												<td>:</td>
 												<td width="100%">
 													<section id="feildTypeSection"
-														th:if="${field.fieldType == T(org.uca.uies.api.simpledbeditorl.enums.FieldType).TEXT_FIELD}">
+														th:if="${field.fieldType == T(org.github.udaracamarasinghe.simpledbeditorwebui.enums.FieldType).TEXT_FIELD}">
 														<input class="form-control" type="text"
 															th:field="*{editorFields[__${stat.index}__].value}"
 															value="*{field.value}" th:placeholder="${field.dataType}" />
 													</section>
 													<section id="feildTypeSection"
-														th:if="${field.fieldType == T(org.uca.uies.api.simpledbeditorl.enums.FieldType).TEXT_AREA}">
+														th:if="${field.fieldType == T(org.github.udaracamarasinghe.simpledbeditorwebui.enums.FieldType).TEXT_AREA}">
 														<textarea class="form-control" rows="8"
 															th:field="*{editorFields[__${stat.index}__].value}"
 															value="*{field.value}" th:placeholder="${field.dataType}"

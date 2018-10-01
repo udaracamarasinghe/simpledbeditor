@@ -4,9 +4,9 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>org.uca</groupId>
+	<groupId>org.github.udaracamarasinghe.examples</groupId>
 	<artifactId>SimpleDBEditorWebUIExample</artifactId>
-	<version>1.0.RELEASE</version>
+	<version>2.0.RELEASE</version>
 	<packaging>jar</packaging>
 
 	<name>Simple DB Editor Web UI Example</name>
@@ -46,15 +46,9 @@
 		</dependency>
 
 		<dependency>
-			<groupId>org.uca</groupId>
-			<artifactId>SimpleDBEditor</artifactId>
-			<version>1.0.RELEASE</version>
-		</dependency>
-
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
+			<groupId>org.github.udaracamarasinghe</groupId>
+			<artifactId>SimpleDBEditorWebUI</artifactId>
+			<version>2.0.RELEASE</version>
 		</dependency>
 
 		<dependency>
