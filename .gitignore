@@ -1,0 +1,36 @@
+# Eclipse
+.classpath
+.project
+.settings/
+.mvn
+*.jar
+*.war
+~$$*
+
+# Intellij
+.idea/
+*.iml
+*.iws
+
+# Mac
+.DS_Store
+
+# Maven
+logs/
+log/
+target/
+log/*
+target/*
+
+#netbeans
+nb-configuration.xml
+
+.factorypath
+.apt_generated/
+*.log
+release/
+
+`$
+~$*
+
+

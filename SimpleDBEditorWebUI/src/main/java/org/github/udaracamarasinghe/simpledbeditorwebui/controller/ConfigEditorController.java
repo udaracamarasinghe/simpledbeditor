@@ -2,6 +2,8 @@ package org.github.udaracamarasinghe.simpledbeditorwebui.controller;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,9 +20,9 @@ import org.github.udaracamarasinghe.simpledbeditorwebui.dto.ColumnValue;
 import org.github.udaracamarasinghe.simpledbeditorwebui.dto.ConfigCtrlPageModel;
 import org.github.udaracamarasinghe.simpledbeditorwebui.dto.EditorField;
 import org.github.udaracamarasinghe.simpledbeditorwebui.dto.EditorModel;
+import org.github.udaracamarasinghe.simpledbeditorwebui.dto.EditorModel.EditType;
 import org.github.udaracamarasinghe.simpledbeditorwebui.dto.KeyValue;
 import org.github.udaracamarasinghe.simpledbeditorwebui.dto.ModuleManager;
-import org.github.udaracamarasinghe.simpledbeditorwebui.dto.EditorModel.EditType;
 import org.github.udaracamarasinghe.simpledbeditorwebui.enums.ProcessFailType;
 import org.github.udaracamarasinghe.simpledbeditorwebui.exceptions.EditableConfigException;
 import org.github.udaracamarasinghe.simpledbeditorwebui.exceptions.HandledException;
@@ -28,15 +30,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
 import org.springframework.context.annotation.ScopedProxyMode;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.View;
+import org.springframework.web.servlet.view.InternalResourceView;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -46,7 +50,6 @@ import com.fasterxml.jackson.databind.JsonNode;
  */
 @Controller
 @RequestMapping("${simpledbeditor.path:/simpledbeditor}")
-@Scope(value = "session", proxyMode = ScopedProxyMode.TARGET_CLASS)
 public class ConfigEditorController {
 
 	private static final Logger logger = Logger.getLogger(ConfigEditorController.class.getName());
@@ -74,10 +77,20 @@ public class ConfigEditorController {
 	@Value("${loingdetails.show:false}")
 	private Boolean loingdetailsShow;
 
+	@RequestMapping(method = RequestMethod.GET, path = "/one")
+	public ResponseEntity<?> getConfig1(
+			@ModelAttribute("configCtrlPageModel") @Valid ConfigCtrlPageModel configCtrlPageModel,
+			BindingResult bindingResult) {
+		return ResponseEntity.ok("KKK");
+	}
+
 	@RequestMapping(method = RequestMethod.GET)
 	public ModelAndView getConfig(@ModelAttribute("configCtrlPageModel") @Valid ConfigCtrlPageModel configCtrlPageModel,
 			BindingResult bindingResult) {
-		ModelAndView model = new ModelAndView("ConfigEditor");
+		logger.info("getConfig " + bindingResult.getNestedPath());
+
+		View view = new InternalResourceView("ConfigEditor");
+		ModelAndView model = new ModelAndView(view);
 
 		model.addObject("modules", getModules());
 
@@ -98,7 +111,7 @@ public class ConfigEditorController {
 		model.addObject("editRow", contextPath + "/editRow/");
 
 		model.addObject("contextPath", contextPath);
-
+		logger.info("getConfig 1" + bindingResult.getNestedPath());
 		return model;
 	}
 
@@ -207,8 +220,12 @@ public class ConfigEditorController {
 							try {
 								String stringValue = fieldValue != null ? convertToString(ss, fieldValue) : null;
 
-								editorModel.add(new EditorField<>(field.field.getName(), ss, stringValue, field.field,
-										field.configEditorEditable));
+								String displayName = field.configEditorEditable.displayName().isEmpty()
+										? field.field.getName()
+										: field.configEditorEditable.displayName();
+
+								editorModel.add(new EditorField<>(field.field.getName(), displayName, ss, stringValue,
+										field.field, field.configEditorEditable));
 							} catch (HandledException ex) {
 								ex.printStackTrace();
 							}
@@ -350,6 +367,7 @@ public class ConfigEditorController {
 
 					model.addObject("editorModel", editorModel);
 				} catch (Exception e) {
+					logger.log(Level.SEVERE, e.getMessage(), e);
 					loadFormMessageError(e.getMessage());
 				}
 			}
@@ -425,7 +443,10 @@ public class ConfigEditorController {
 
 			Map<String, FieldDetails> allEditableFields = findAllEditableFields(selectedConfigType);
 
-			for (FieldDetails field : allEditableFields.values()) {
+			List<FieldDetails> values2 = new ArrayList<>(allEditableFields.values());
+			Collections.sort(values2);
+
+			for (FieldDetails field : values2) {
 				if (field.configEditorEditable.isEditable()) {
 					Object fieldValue = field.field.get(object);
 					Class<?> ss = field.field.getType();
@@ -433,7 +454,9 @@ public class ConfigEditorController {
 					try {
 						String stringValue = fieldValue != null ? convertToString(ss, fieldValue) : null;
 
-						editorModel.add(new EditorField<>(field.field.getName(), ss, stringValue, field.field,
+						String name = field.configEditorEditable.displayName().isEmpty() ? field.field.getName()
+								: field.configEditorEditable.displayName();
+						editorModel.add(new EditorField<>(field.field.getName(), name, ss, stringValue, field.field,
 								field.configEditorEditable));
 					} catch (HandledException ex) {
 						ex.printStackTrace();
@@ -570,7 +593,7 @@ public class ConfigEditorController {
 
 		if (selectedConfigType != null) {
 			try {
-				ArrayList<String> columnNames = new ArrayList<>();
+				List<String> columnNames = new ArrayList<>();
 				ArrayList<ColumnValue> columnValues = new ArrayList<>();
 
 				Map<String, FieldDetails> allEditableFields = findAllEditableFields(selectedConfigType);
@@ -581,14 +604,19 @@ public class ConfigEditorController {
 					Object object = configDataFor.get(key);
 
 					List<Object> values = new ArrayList<Object>();
-					for (FieldDetails field : allEditableFields.values()) {
+					List<FieldDetails> values2 = new ArrayList<>(allEditableFields.values());
+					Collections.sort(values2);
+					for (FieldDetails field : values2) {
 						if (field.configEditorEditable.isViewableOnTable()) {
 							field.field.setAccessible(true);
 							Object fieldValue = field.field.get(object);
 
 							values.add(fieldValue);
-							if (!columnNames.contains(field.field.getName()))
-								columnNames.add(field.field.getName());
+							String name = field.configEditorEditable.displayName().isEmpty() ? field.field.getName()
+									: field.configEditorEditable.displayName();
+							if (!columnNames.contains(name)) {
+								columnNames.add(name);
+							}
 						}
 					}
 
@@ -649,10 +677,17 @@ public class ConfigEditorController {
 		return fields;
 	}
 
-	class FieldDetails {
+	class FieldDetails implements Comparable<FieldDetails> {
+
 		ConfigEditorField configEditorEditable;
 
 		Field field;
+
+		@Override
+		public int compareTo(FieldDetails o) {
+			return Integer.compare(this.configEditorEditable.columnOrder(), o.configEditorEditable.columnOrder());
+		}
+
 	}
 
 }

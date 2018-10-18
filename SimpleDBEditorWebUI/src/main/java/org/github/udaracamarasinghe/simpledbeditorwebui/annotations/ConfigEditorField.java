@@ -19,5 +19,8 @@ public @interface ConfigEditorField {
 
 	FieldType fieldType() default FieldType.TEXT_FIELD;
 
-	
+	String displayName() default "";
+
+	int columnOrder() default 0;
+
 }

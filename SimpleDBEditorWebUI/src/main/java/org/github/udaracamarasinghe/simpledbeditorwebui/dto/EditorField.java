@@ -12,6 +12,7 @@ import org.github.udaracamarasinghe.simpledbeditorwebui.enums.FieldType;
 public class EditorField<T> {
 
 	private String name;
+	private String displayName;
 	private Class<T> t;
 	private String value;
 	private Field field;
@@ -34,9 +35,11 @@ public class EditorField<T> {
 		this.field = field;
 	}
 
-	public EditorField(String name, Class<T> t, String value, Field field, ConfigEditorField configEditorEditable) {
+	public EditorField(String name, String displayName, Class<T> t, String value, Field field,
+			ConfigEditorField configEditorEditable) {
 		super();
 		this.name = name;
+		this.displayName = displayName;
 		this.t = t;
 		this.value = value;
 		this.field = field;
@@ -86,6 +89,14 @@ public class EditorField<T> {
 
 	public void setFieldType(FieldType fieldType) {
 		this.fieldType = fieldType;
+	}
+
+	public String getDisplayName() {
+		return displayName;
+	}
+
+	public void setDisplayName(String displayName) {
+		this.displayName = displayName;
 	}
 
 	public String getDataType() {

@@ -10,8 +10,8 @@
 <link rel="stylesheet" type="text/css"
 	href="webjars/bootstrap/3.3.7/css/bootstrap.min.css" />
 
-<link rel="stylesheet" th:href="@{/css/main.css}"
-	href="../../css/main.css" />
+<link href="../static/css/main.css" th:href="@{/css/main.css}"
+	rel="stylesheet" />
 
 <script type="text/javascript" src="../../js/jquery-3.2.1.min.js">
 	
@@ -234,9 +234,9 @@ footer {
 
 										<th:block th:each="field, stat : *{editorFields}">
 											<tr>
-												<th th:text="${field.name}"></th>
+												<th th:text="${field.displayName}"></th>
 												<td>:</td>
-												<td width="100%">
+												<td width="85%">
 													<section id="feildTypeSection"
 														th:if="${field.fieldType == T(org.github.udaracamarasinghe.simpledbeditorwebui.enums.FieldType).TEXT_FIELD}">
 														<input class="form-control" type="text"
